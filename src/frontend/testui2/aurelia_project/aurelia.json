@@ -1,5 +1,5 @@
 {
-  "name": "testui",
+  "name": "testui-2",
   "type": "project:application",
   "paths": {
     "root": "src",
@@ -23,9 +23,9 @@
   "platform": {
     "hmr": false,
     "open": false,
-    "port": 8080,
+    "port": 5000,
     "host": "localhost",
-    "output": "../../../api/wwwroot/dist"
+    "output": "wwwroot/dist"
   },
   "packageManager": "yarn"
 }

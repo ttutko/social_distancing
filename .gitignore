@@ -598,3 +598,5 @@ dmypy.json
 .history
 
 # End of https://www.gitignore.io/api/rider,csharp,python,pycharm,visualstudiocode
+
+certs/
