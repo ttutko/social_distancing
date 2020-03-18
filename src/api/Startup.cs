@@ -10,6 +10,11 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
+using MongoDB.Driver;
+using AspNetCore.Identity.Mongo;
 
 namespace api
 {
@@ -25,6 +30,56 @@ namespace api
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            var client = new MongoClient();
+            
+            services.AddSingleton<IMongoClient>(client);
+
+            services.AddHttpContextAccessor();
+
+            // services.AddIdentityMongoDbProvider<ApplicationUser>(identity =>
+            // {
+                
+            // },
+            // mongo => 
+            // {
+            //     mongo.UsersCollection = "users";
+            //     mongo.ConnectionString = "mongodb://localhost:27017";
+            // });
+            
+            services.AddAuthentication(options => 
+            {
+                options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;
+                
+            })
+            .AddCookie()
+            .AddOpenIdConnect(options =>
+            {
+                options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                options.Authority = "http://localhost:8888/auth/realms/test";
+                options.RequireHttpsMetadata = false;
+                options.ClientId = "webapi";
+                options.ClientSecret = "clientsecret";
+                options.ResponseType = OpenIdConnectResponseType.Code;
+                options.GetClaimsFromUserInfoEndpoint = true;
+                options.Scope.Add("openid");
+                options.Scope.Add("profile");
+                options.SaveTokens = true;
+                options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+                {
+                    NameClaimType = "name",
+                    RoleClaimType = "groups",
+                    ValidateIssuer = true
+                };
+                // options.Events.OnUserInformationReceived = ctx => {
+                //     Console.WriteLine($"***** USER **** {ctx.User.ToString()}");
+
+                //     return Task.CompletedTask;
+                // };            
+            });
+
+            services.AddAuthorization();
+
             services.AddControllers();
         }
 
@@ -42,6 +97,7 @@ namespace api
 
             app.UseRouting();
 
+            app.UseAuthentication();
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
