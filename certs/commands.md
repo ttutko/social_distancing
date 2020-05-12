@@ -24,7 +24,7 @@ Convert to pfx
 
 Verify
 
-`openssl verify -CAfile localhost.crt localhost.crt`
+`openssl verify -CAfile rootCA.crt localhost.crt`
 
 Copy localhost.crt to /usr/local/share/ca-certificates
 Make sure /usr/local/share/ca-certificates has r+x permissions

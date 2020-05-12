@@ -20,7 +20,7 @@ namespace api
             Host.CreateDefaultBuilder(args)
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
-                    webBuilder.UseStartup<Startup>();
+                    webBuilder.UseStartup<Startup>().UseUrls(urls: "http://0.0.0.0:5000");
                 });
     }
 }

@@ -15,6 +15,9 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using MongoDB.Driver;
 using AspNetCore.Identity.Mongo;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Logging;
+using Microsoft.AspNetCore.HttpOverrides;
 
 namespace api
 {
@@ -30,9 +33,16 @@ namespace api
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            IdentityModelEventSource.ShowPII = true;
+            
             var client = new MongoClient();
             
             services.AddSingleton<IMongoClient>(client);
+
+            services.Configure<ForwardedHeadersOptions>(options => {
+                options.ForwardedHeaders = 
+                    ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+            });
 
             services.AddHttpContextAccessor();
 
@@ -48,34 +58,57 @@ namespace api
             
             services.AddAuthentication(options => 
             {
-                options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-                options.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;
+                // options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                // options.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
                 
             })
             .AddCookie()
-            .AddOpenIdConnect(options =>
-            {
-                options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-                options.Authority = "http://localhost:8888/auth/realms/test";
-                options.RequireHttpsMetadata = false;
-                options.ClientId = "webapi";
-                options.ClientSecret = "clientsecret";
-                options.ResponseType = OpenIdConnectResponseType.Code;
-                options.GetClaimsFromUserInfoEndpoint = true;
-                options.Scope.Add("openid");
-                options.Scope.Add("profile");
-                options.SaveTokens = true;
-                options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
-                {
-                    NameClaimType = "name",
-                    RoleClaimType = "groups",
-                    ValidateIssuer = true
-                };
-                // options.Events.OnUserInformationReceived = ctx => {
-                //     Console.WriteLine($"***** USER **** {ctx.User.ToString()}");
+            // .AddOpenIdConnect(options =>
+            // {
+            //     options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+            //     options.Authority = "http://localhost:8888/auth/realms/test";
+            //     options.RequireHttpsMetadata = false;
+            //     options.ClientId = "webapi";
+            //     options.ClientSecret = "clientsecret";
+            //     options.ResponseType = OpenIdConnectResponseType.Code;
+            //     options.GetClaimsFromUserInfoEndpoint = true;
+            //     options.Scope.Add("openid");
+            //     options.Scope.Add("profile");
+            //     options.SaveTokens = true;
+            //     options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+            //     {
+            //         NameClaimType = "name",
+            //         RoleClaimType = "groups",
+            //         ValidateIssuer = true
+            //     };
+            //     // options.Events.OnUserInformationReceived = ctx => {
+            //     //     Console.WriteLine($"***** USER **** {ctx.User.ToString()}");
 
-                //     return Task.CompletedTask;
-                // };            
+            //     //     return Task.CompletedTask;
+            //     // };            
+            // })
+            .AddJwtBearer( o => 
+            {
+                o.Authority = "https://localhost:8888/auth/realms/test";
+                o.Audience = "postman";
+                o.RequireHttpsMetadata = true;
+                o.Events = new JwtBearerEvents()
+                {
+                    OnAuthenticationFailed = c =>
+                    {
+                        c.NoResult();
+                        c.Response.StatusCode = 500;
+                        c.Response.ContentType = "text/plain";
+                        // if(Environment.IsDevelopment())
+                        // {
+                        //     return c.Response.WriteAsync(c.Exception.ToString());
+                        // }
+                        // return c.Response.Body.WriteAsync("An error occured processing your authentication.");
+                        return Task.CompletedTask;
+                    }
+                };
             });
 
             services.AddAuthorization();
@@ -86,12 +119,14 @@ namespace api
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
+            app.UseForwardedHeaders();
+
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
             }
 
-            app.UseHttpsRedirection();
+            //app.UseHttpsRedirection();
             app.UseDefaultFiles();
             app.UseStaticFiles();
 

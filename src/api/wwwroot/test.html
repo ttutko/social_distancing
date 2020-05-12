@@ -1,0 +1,43 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="http://localhost:8888/auth/js/keycloak.js" type="text/javascript"></script>
+</head>
+<body>
+    <button onclick="login()">Login</button><button onclick="callSecureApi()">Call Api</button><button>Logout</button>
+    <script type="text/javascript">
+        var keycloak = new Keycloak({
+            url: 'http://localhost:8888/auth',
+            realm: 'test',
+            clientId: 'postman'
+        });
+
+        keycloak.init({
+            promiseType: 'native'
+        }).then(function(authenticated) {
+            alert(authenticated ? 'authenticated' : 'not authenticated');
+        }).catch(function() {
+            alert('failed to initialize');
+        });
+
+        function login() {
+            alert('login');
+            keycloak.login();
+        }
+
+        function callSecureApi() {
+            var Http = new XMLHttpRequest();
+            var url = 'https://localhost:5001/WeatherForecast';
+
+            Http.open("GET", url);
+            Http.send();
+
+            Http.onreadystatechange=(e) => {
+                console.log(Http.responseText);
+            };
+        }
+    </script>
+</body>
+</html>
